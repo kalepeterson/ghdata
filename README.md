@@ -9,6 +9,11 @@ GHData is a Python library and REST server that provides data related to GitHub 
 
 GHData is under heavy development; expect frequent backwards-incompatible changes until a 1.x.x release!
 
+Roadmap
+-------
+
+Our technical, outreach, and academic goals [roadmap](docs/roadmap.md).
+
 
 License and Copyright
 ---------------------
@@ -47,7 +52,7 @@ To install development version: `pip install --upgrade https://github.com/OSSHea
 
 ### Step 2 (Optional if using command line arguments) - Change the default configuration
 
-The command to create the default configuration file is not yet working.
+Not required, but strongly recommended, is to generate an initial config file: `ghdata create-default-config`
 
 ### Step 3 (Optional if you are able to get the full database) - Install a small, local testing database
 
@@ -71,13 +76,13 @@ Usage
 -----
 
 To run GHData as a server: 
-  1. Type `ghdata`. A config file will be generated. 
+  1. Type `ghdata` in a terminal. A config file named ghdata.cfg will be generated. 
   2. Edit the ghdata.cfg file with your database settings. 
   3. Type `ghdata` again to start the server.
 
 
 To use as a Python package:
-```
+```python
 from ghdata import GHData
 
 client = GHData('mysql+pymysql://<user>:<pass>@<host>:<port>/<database name>')
@@ -104,4 +109,6 @@ Maintainers
 
 
 
-(This work has been funded through the Alfred P. Sloan Foundation)
+Support
+-------
+This work has been funded through the Alfred P. Sloan Foundation
