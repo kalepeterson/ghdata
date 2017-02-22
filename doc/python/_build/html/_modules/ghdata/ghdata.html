@@ -1,0 +1,215 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ghdata.ghdata &#8212; GHData  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ghdata.ghdata</h1><div class="highlight"><pre>
+<span></span><span class="c1">#SPDX-License-Identifier: MIT</span>
+
+<span class="kn">import</span> <span class="nn">sqlalchemy</span> <span class="k">as</span> <span class="nn">s</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<div class="viewcode-block" id="GHData"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData">[docs]</a><span class="k">class</span> <span class="nc">GHData</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Uses GHTorrent and other GitHub data sources and returns dataframes with interesting GitHub indicators&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dbstr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Connect to GHTorrent and infer the schema&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">db</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">create_engine</span><span class="p">(</span><span class="n">dbstr</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__single_table_count_by_date</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="n">repo_col</span><span class="o">=</span><span class="s1">&#39;project_id&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns query string to count occurances of rows per date for a given table.</span>
+<span class="sd">        External input must never be sent to this function, it is for internal use only.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT date(created_at) AS &quot;date&quot;, COUNT(*) AS &quot;</span><span class="si">{0}</span><span class="s2">&quot;</span>
+<span class="s2">            FROM </span><span class="si">{0}</span><span class="s2"></span>
+<span class="s2">            WHERE </span><span class="si">{1}</span><span class="s2"> = :repoid</span>
+<span class="s2">            GROUP BY WEEK(created_at)&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">repo_col</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">__predicate_dates</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns date limiting WHERE clause&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">start</span> <span class="ow">and</span> <span class="n">end</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">&quot;created_at &gt;= &#39;</span><span class="si">{}</span><span class="s2">&#39;&#39; AND created_at &lt;= &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">start</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span> <span class="n">end</span><span class="o">.</span><span class="n">isoformat</span><span class="p">())</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">start</span><span class="p">):</span> 
+            <span class="k">return</span> <span class="s2">&quot;created_at &gt;= &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">start</span><span class="o">.</span><span class="n">isoformat</span><span class="p">())</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">end</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">&quot;created_at &lt;= &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">end</span><span class="o">.</span><span class="n">isoformat</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;&#39;</span>
+
+<div class="viewcode-block" id="GHData.repoid"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.repoid">[docs]</a>    <span class="k">def</span> <span class="nf">repoid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">owner</span><span class="p">,</span> <span class="n">repo</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the project.id given an owner and a repo&quot;&quot;&quot;</span>
+        <span class="n">reposql</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s1">&#39;SELECT projects.id FROM projects INNER JOIN users ON projects.owner_id = users.id WHERE projects.name = :repo AND users.login = :owner&#39;</span><span class="p">)</span>
+        <span class="n">repoid</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">reposql</span><span class="p">,</span> <span class="n">repo</span><span class="o">=</span><span class="n">repo</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="n">owner</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="n">repoid</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">repoid</span></div>
+
+<div class="viewcode-block" id="GHData.userid"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.userid">[docs]</a>    <span class="k">def</span> <span class="nf">userid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the userid given a username&quot;&quot;&quot;</span>
+        <span class="n">reposql</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s1">&#39;SELECT users.id FROM users WHERE users.login = :username&#39;</span><span class="p">)</span>
+        <span class="n">userid</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">reposql</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="n">userid</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">userid</span></div>
+
+
+    <span class="c1"># Basic timeseries queries</span>
+<div class="viewcode-block" id="GHData.stargazers"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.stargazers">[docs]</a>    <span class="k">def</span> <span class="nf">stargazers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">stargazersSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__single_table_count_by_date</span><span class="p">(</span><span class="s1">&#39;watchers&#39;</span><span class="p">,</span> <span class="s1">&#39;repo_id&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">stargazersSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.commits"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.commits">[docs]</a>    <span class="k">def</span> <span class="nf">commits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">commitsSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__single_table_count_by_date</span><span class="p">(</span><span class="s1">&#39;commits&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">commitsSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.forks"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.forks">[docs]</a>    <span class="k">def</span> <span class="nf">forks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">forksSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__single_table_count_by_date</span><span class="p">(</span><span class="s1">&#39;projects&#39;</span><span class="p">,</span> <span class="s1">&#39;forked_from&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">forksSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GHData.issues"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.issues">[docs]</a>    <span class="k">def</span> <span class="nf">issues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">issuesSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__single_table_count_by_date</span><span class="p">(</span><span class="s1">&#39;issues&#39;</span><span class="p">,</span> <span class="s1">&#39;repo_id&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">issuesSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.pulls"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.pulls">[docs]</a>    <span class="k">def</span> <span class="nf">pulls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">pullsSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT date(pull_request_history.created_at) AS &quot;date&quot;,</span>
+<span class="s2">            (COUNT(pull_requests.id)) AS &quot;pull_requests&quot;,</span>
+<span class="s2">            (SELECT COUNT(*) FROM pull_request_comments</span>
+<span class="s2">            WHERE pull_request_comments.pull_request_id = pull_request_history.pull_request_id) AS &quot;comments&quot; </span>
+<span class="s2">            FROM pull_request_history</span>
+<span class="s2">            INNER JOIN pull_requests</span>
+<span class="s2">            ON pull_request_history.pull_request_id = pull_requests.id</span>
+<span class="s2">            WHERE pull_requests.head_repo_id = :repoid</span>
+<span class="s2">            AND pull_request_history.action = &quot;merged&quot;</span>
+<span class="s2">            GROUP BY WEEK(pull_request_history.created_at)</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">pullsSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.contributors"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.contributors">[docs]</a>    <span class="k">def</span> <span class="nf">contributors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">0</span></div>
+
+<div class="viewcode-block" id="GHData.contributions"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.contributions">[docs]</a>    <span class="k">def</span> <span class="nf">contributions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">,</span> <span class="n">userid</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns dataframe with contributions over time for a repo, optionally limited by user&quot;&quot;&quot;</span>
+        <span class="n">contributionsSQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT  DATE(coms.created_at) as &quot;date&quot;,</span>
+<span class="s2">                    coms.count            as &quot;commits&quot;,</span>
+<span class="s2">                    pulls.count           as &quot;pull_requests&quot;,</span>
+<span class="s2">                    iss.count             as &quot;issues&quot;,</span>
+<span class="s2">                    comcoms.count         as &quot;commit_comments&quot;,</span>
+<span class="s2">                    pullscoms.count       as &quot;pull_request_comments&quot;,</span>
+<span class="s2">                    isscoms.count         as &quot;issue_comments&quot;</span>
+
+<span class="s2">            FROM (SELECT created_at AS created_at, COUNT(*) AS count FROM commits INNER JOIN project_commits ON project_commits.commit_id = commits.id WHERE project_commits.project_id = :repoid [[AND commits.author_id = :userid]] GROUP BY DATE(created_at)) coms</span>
+
+<span class="s2">            LEFT JOIN (SELECT pull_request_history.created_at AS created_at, COUNT(*) AS count FROM pull_request_history JOIN pull_requests ON pull_requests.id = pull_request_history.pull_request_id WHERE pull_requests.base_repo_id = :repoid AND pull_request_history.action = &#39;merged&#39; [[AND pull_request_history.actor_id = :userid]] GROUP BY DATE(created_at)) AS pulls</span>
+<span class="s2">            ON DATE(pulls.created_at) = DATE(coms.created_at)</span>
+
+<span class="s2">            LEFT JOIN (SELECT issues.created_at AS created_at, COUNT(*) AS count FROM issues WHERE issues.repo_id = :repoid [[AND issues.reporter_id = :userid]] GROUP BY DATE(created_at)) AS iss</span>
+<span class="s2">            ON DATE(iss.created_at) = DATE(coms.created_at)</span>
+
+<span class="s2">            LEFT JOIN (SELECT commit_comments.created_at AS created_at, COUNT(*) AS count FROM commit_comments JOIN project_commits ON project_commits.commit_id = commit_comments.commit_id WHERE project_commits.project_id = :repoid [[AND commit_comments.user_id = :userid]] GROUP BY DATE(commit_comments.created_at)) AS comcoms</span>
+<span class="s2">            ON DATE(comcoms.created_at) = DATE(coms.created_at)</span>
+
+<span class="s2">            LEFT JOIN (SELECT pull_request_comments.created_at AS created_at, COUNT(*) AS count FROM pull_request_comments JOIN pull_requests ON pull_request_comments.pull_request_id = pull_requests.id WHERE pull_requests.base_repo_id = :repoid [[AND pull_request_comments.user_id = :userid]] GROUP BY DATE(pull_request_comments.created_at)) AS pullscoms</span>
+<span class="s2">            ON DATE(pullscoms.created_at) = DATE(coms.created_at)</span>
+
+<span class="s2">            LEFT JOIN (SELECT issue_comments.created_at AS created_at, COUNT(*) AS count FROM issue_comments JOIN issues ON issue_comments.issue_id = issues.id WHERE issues.repo_id = :repoid [[AND issue_comments.user_id = :userid]] GROUP BY DATE(issue_comments.created_at)) AS isscoms</span>
+<span class="s2">            ON DATE(isscoms.created_at) = DATE(coms.created_at)</span>
+
+<span class="s2">            ORDER BY DATE(coms.created_at)</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">userid</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">contributionsSQL</span> <span class="o">=</span> <span class="n">contributionsSQL</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;[[&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">contributionsSQL</span> <span class="o">=</span> <span class="n">contributionsSQL</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;]]&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">contributionsSQL</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">contributionsSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">),</span> <span class="s2">&quot;userid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">userid</span><span class="p">)})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">contributionsSQL</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\[\[.+?(?=\]\])&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">contributionsSQL</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">contributionsSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div></div>
+
+       
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, OSSHealth Team.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
