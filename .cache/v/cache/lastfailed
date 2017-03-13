@@ -1,0 +1,13 @@
+{
+  "test/test_ghdata.py::test_commits": true, 
+  "test/test_ghdata.py::test_committer_locations": true, 
+  "test/test_ghdata.py::test_contributions": true, 
+  "test/test_ghdata.py::test_contributors": true, 
+  "test/test_ghdata.py::test_forks": true, 
+  "test/test_ghdata.py::test_issue_response_time": true, 
+  "test/test_ghdata.py::test_issues": true, 
+  "test/test_ghdata.py::test_issues_with_close": true, 
+  "test/test_ghdata.py::test_repoid": true, 
+  "test/test_ghdata.py::test_stargazers": true, 
+  "test/test_ghdata.py::test_userid": true
+}
