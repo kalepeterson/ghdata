@@ -1,0 +1,421 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ghdata.ghdata &#8212; GHData  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ghdata.ghdata</h1><div class="highlight"><pre>
+<span></span><span class="c1">#SPDX-License-Identifier: MIT</span>
+
+<span class="kn">import</span> <span class="nn">sqlalchemy</span> <span class="k">as</span> <span class="nn">s</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">)):</span>
+    <span class="kn">import</span> <span class="nn">urllib.parse</span> <span class="k">as</span> <span class="nn">url</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">urllib</span> <span class="k">as</span> <span class="nn">url</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<div class="viewcode-block" id="GHData"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData">[docs]</a><span class="k">class</span> <span class="nc">GHData</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Uses GHTorrent and other GitHub data sources and returns dataframes with interesting GitHub indicators&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dbstr</span><span class="p">,</span> <span class="n">public_www_api_key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Connect to GHTorrent</span>
+
+<span class="sd">        :param dbstr: The [database string](http://docs.sqlalchemy.org/en/latest/core/engines.html) to connect to the GHTorrent database</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">db</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">create_engine</span><span class="p">(</span><span class="n">dbstr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PUBLIC_WWW_API_KEY</span> <span class="o">=</span> <span class="n">public_www_api_key</span>
+        
+    <span class="k">def</span> <span class="nf">__single_table_count_by_date</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="n">repo_col</span><span class="o">=</span><span class="s1">&#39;project_id&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates query string to count occurances of rows per date for a given table.</span>
+<span class="sd">        External input must never be sent to this function, it is for internal use only.</span>
+
+<span class="sd">        :param table: The table in GHTorrent to generate the string for</span>
+<span class="sd">        :param repo_col: The column in that table with the project ids</span>
+<span class="sd">        :return: Query string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT date(created_at) AS &quot;date&quot;, COUNT(*) AS &quot;</span><span class="si">{0}</span><span class="s2">&quot;</span>
+<span class="s2">            FROM </span><span class="si">{0}</span><span class="s2"></span>
+<span class="s2">            WHERE </span><span class="si">{1}</span><span class="s2"> = :repoid</span>
+<span class="s2">            GROUP BY WEEK(created_at)&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">repo_col</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GHData.repoid"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.repoid">[docs]</a>    <span class="k">def</span> <span class="nf">repoid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">owner</span><span class="p">,</span> <span class="n">repo</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a repository&#39;s ID as it appears in the GHTorrent projects table</span>
+<span class="sd">        github.com/[owner]/[project]</span>
+
+<span class="sd">        :param owner: The username of a project&#39;s owner</span>
+<span class="sd">        :param repo: The name of the repository</span>
+<span class="sd">        :return: The repository&#39;s ID as it appears in the GHTorrent projects table</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">reposql</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s1">&#39;SELECT projects.id FROM projects INNER JOIN users ON projects.owner_id = users.id WHERE projects.name = :repo AND users.login = :owner&#39;</span><span class="p">)</span>
+        <span class="n">repoid</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">reposql</span><span class="p">,</span> <span class="n">repo</span><span class="o">=</span><span class="n">repo</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="n">owner</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="n">repoid</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">repoid</span></div>
+
+<div class="viewcode-block" id="GHData.userid"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.userid">[docs]</a>    <span class="k">def</span> <span class="nf">userid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the userid given a username</span>
+
+<span class="sd">        :param username: GitHub username to be matched against the login table in GHTorrent</span>
+<span class="sd">        :return: The id from the users table in GHTorrent</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">reposql</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s1">&#39;SELECT users.id FROM users WHERE users.login = :username&#39;</span><span class="p">)</span>
+        <span class="n">userid</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">reposql</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="n">userid</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">userid</span></div>
+
+
+    <span class="c1"># Basic timeseries queries</span>
+<div class="viewcode-block" id="GHData.stargazers"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.stargazers">[docs]</a>    <span class="k">def</span> <span class="nf">stargazers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Timeseries of when people starred a repo</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table. Use repoid() to get this.</span>
+<span class="sd">        :return: DataFrame with stargazers/day</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">stargazersSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__single_table_count_by_date</span><span class="p">(</span><span class="s1">&#39;watchers&#39;</span><span class="p">,</span> <span class="s1">&#39;repo_id&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">stargazersSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.commits"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.commits">[docs]</a>    <span class="k">def</span> <span class="nf">commits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Timeseries of all the commits on a repo</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table. Use repoid() to get this.</span>
+<span class="sd">        :return: DataFrame with commits/day</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">commitsSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__single_table_count_by_date</span><span class="p">(</span><span class="s1">&#39;commits&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">commitsSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.forks"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.forks">[docs]</a>    <span class="k">def</span> <span class="nf">forks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Timeseries of when a repo&#39;s forks were created</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table. Use repoid() to get this.</span>
+<span class="sd">        :return: DataFrame with forks/day</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">forksSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__single_table_count_by_date</span><span class="p">(</span><span class="s1">&#39;projects&#39;</span><span class="p">,</span> <span class="s1">&#39;forked_from&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">forksSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GHData.issues"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.issues">[docs]</a>    <span class="k">def</span> <span class="nf">issues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Timeseries of when people starred a repo</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table. Use repoid() to get this.</span>
+<span class="sd">        :return: DataFrame with issues/day</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">issuesSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__single_table_count_by_date</span><span class="p">(</span><span class="s1">&#39;issues&#39;</span><span class="p">,</span> <span class="s1">&#39;repo_id&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">issuesSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.issues_with_close"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.issues_with_close">[docs]</a>    <span class="k">def</span> <span class="nf">issues_with_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        How long on average each week it takes to close an issue</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table. Use repoid() to get this.</span>
+<span class="sd">        :return: DataFrame with issues/day</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">issuesSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT issues.id as &quot;id&quot;,</span>
+<span class="s2">                   issues.created_at as &quot;date&quot;,</span>
+<span class="s2">                   DATEDIFF(closed.created_at, issues.created_at)  AS &quot;days_to_close&quot;</span>
+<span class="s2">            FROM issues </span>
+<span class="s2">             </span>
+<span class="s2">           JOIN </span>
+<span class="s2">                (SELECT * FROM issue_events</span>
+<span class="s2">                 WHERE issue_events.action = &quot;closed&quot;) closed</span>
+<span class="s2">            ON issues.id = closed.issue_id</span>
+<span class="s2">            </span>
+<span class="s2">            WHERE issues.repo_id = :repoid&quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">issuesSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.pulls"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.pulls">[docs]</a>    <span class="k">def</span> <span class="nf">pulls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Timeseries of pull requests creation, also gives their associated activity</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table. Use repoid() to get this.</span>
+<span class="sd">        :return: DataFrame with pull requests by day</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pullsSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT date(pull_request_history.created_at) AS &quot;date&quot;,</span>
+<span class="s2">            (COUNT(pull_requests.id)) AS &quot;pull_requests&quot;,</span>
+<span class="s2">            (SELECT COUNT(*) FROM pull_request_comments</span>
+<span class="s2">            WHERE pull_request_comments.pull_request_id = pull_request_history.pull_request_id) AS &quot;comments&quot; </span>
+<span class="s2">            FROM pull_request_history</span>
+<span class="s2">            INNER JOIN pull_requests</span>
+<span class="s2">            ON pull_request_history.pull_request_id = pull_requests.id</span>
+<span class="s2">            WHERE pull_requests.head_repo_id = :repoid</span>
+<span class="s2">            AND pull_request_history.action = &quot;merged&quot;</span>
+<span class="s2">            GROUP BY WEEK(pull_request_history.created_at)</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">pullsSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.contributors"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.contributors">[docs]</a>    <span class="k">def</span> <span class="nf">contributors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        All the contributors to a project and the counts of their contributions</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table. Use repoid() to get this.</span>
+<span class="sd">        :return: DataFrame with users id, users login, and their contributions by type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">contributorsSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT * FROM</span>
+
+<span class="s2">               (</span>
+<span class="s2">               SELECT   users.id        as &quot;user_id&quot;,</span>
+<span class="s2">                        users.login     as &quot;login&quot;,</span>
+<span class="s2">                        users.location  as &quot;location&quot;,</span>
+<span class="s2">                        com.count       as &quot;commits&quot;,</span>
+<span class="s2">                        pulls.count     as &quot;pull_requests&quot;,</span>
+<span class="s2">                        iss.count       as &quot;issues&quot;,</span>
+<span class="s2">                        comcoms.count   as &quot;commit_comments&quot;,</span>
+<span class="s2">                        pullscoms.count as &quot;pull_request_comments&quot;,</span>
+<span class="s2">                        isscoms.count   as &quot;issue_comments&quot;,</span>
+<span class="s2">                        com.count + pulls.count + iss.count + comcoms.count + pullscoms.count + isscoms.count as &quot;total&quot;</span>
+
+<span class="s2">               FROM users</span>
+
+<span class="s2">               LEFT JOIN (SELECT committer_id AS id, COUNT(*) AS count FROM commits INNER JOIN project_commits ON project_commits.commit_id = commits.id WHERE project_commits.project_id = :repoid GROUP BY commits.committer_id) AS com</span>
+<span class="s2">               ON com.id = users.id</span>
+
+<span class="s2">               LEFT JOIN (SELECT pull_request_history.actor_id AS id, COUNT(*) AS count FROM pull_request_history JOIN pull_requests ON pull_requests.id = pull_request_history.pull_request_id WHERE pull_requests.base_repo_id = :repoid AND pull_request_history.action = &#39;merged&#39; GROUP BY pull_request_history.actor_id) AS pulls</span>
+<span class="s2">               ON pulls.id = users.id</span>
+
+<span class="s2">               LEFT JOIN (SELECT reporter_id AS id, COUNT(*) AS count FROM issues WHERE issues.repo_id = :repoid GROUP BY issues.reporter_id) AS iss</span>
+<span class="s2">               ON iss.id = users.id</span>
+
+<span class="s2">               LEFT JOIN (SELECT commit_comments.user_id AS id, COUNT(*) AS count FROM commit_comments JOIN project_commits ON project_commits.commit_id = commit_comments.commit_id WHERE project_commits.project_id = :repoid GROUP BY commit_comments.user_id) AS comcoms</span>
+<span class="s2">               ON comcoms.id = users.id</span>
+
+<span class="s2">               LEFT JOIN (SELECT pull_request_comments.user_id AS id, COUNT(*) AS count FROM pull_request_comments JOIN pull_requests ON pull_request_comments.pull_request_id = pull_requests.id WHERE pull_requests.base_repo_id = :repoid GROUP BY pull_request_comments.user_id) AS pullscoms</span>
+<span class="s2">               ON pullscoms.id = users.id</span>
+
+<span class="s2">               LEFT JOIN (SELECT issue_comments.user_id AS id, COUNT(*) AS count FROM issue_comments JOIN issues ON issue_comments.issue_id = issues.id WHERE issues.repo_id = :repoid GROUP BY issue_comments.user_id) AS isscoms</span>
+<span class="s2">               ON isscoms.id = users.id</span>
+
+<span class="s2">               GROUP BY users.id</span>
+<span class="s2">               ORDER BY com.count DESC</span>
+<span class="s2">               ) user_activity</span>
+
+<span class="s2">            WHERE commits IS NOT NULL</span>
+<span class="s2">            OR    pull_requests IS NOT NULL</span>
+<span class="s2">            OR    issues IS NOT NULL</span>
+<span class="s2">            OR    commit_comments IS NOT NULL</span>
+<span class="s2">            OR    pull_request_comments IS NOT NULL</span>
+<span class="s2">            OR    issue_comments IS NOT NULL;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">contributorsSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;user_id&#39;</span><span class="p">],</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+
+<div class="viewcode-block" id="GHData.contributions"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.contributions">[docs]</a>    <span class="k">def</span> <span class="nf">contributions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">,</span> <span class="n">userid</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Timeseries of all the contributions to a project, optionally limited to a specific user</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table.</span>
+<span class="sd">        :param userid: The id of user if you want to limit the contributions to a specific user.</span>
+<span class="sd">        :return: DataFrame with all of the contributions seperated by day.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rawContributionsSQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT  DATE(coms.created_at) as &quot;date&quot;,</span>
+<span class="s2">                    coms.count            as &quot;commits&quot;,</span>
+<span class="s2">                    pulls.count           as &quot;pull_requests&quot;,</span>
+<span class="s2">                    iss.count             as &quot;issues&quot;,</span>
+<span class="s2">                    comcoms.count         as &quot;commit_comments&quot;,</span>
+<span class="s2">                    pullscoms.count       as &quot;pull_request_comments&quot;,</span>
+<span class="s2">                    isscoms.count         as &quot;issue_comments&quot;,</span>
+<span class="s2">                    coms.count + pulls.count + iss.count + comcoms.count + pullscoms.count + isscoms.count as &quot;total&quot;</span>
+
+<span class="s2">            FROM (SELECT created_at AS created_at, COUNT(*) AS count FROM commits INNER JOIN project_commits ON project_commits.commit_id = commits.id WHERE project_commits.project_id = :repoid[[ AND commits.author_id = :userid]] GROUP BY DATE(created_at)) coms</span>
+
+<span class="s2">            LEFT JOIN (SELECT pull_request_history.created_at AS created_at, COUNT(*) AS count FROM pull_request_history JOIN pull_requests ON pull_requests.id = pull_request_history.pull_request_id WHERE pull_requests.base_repo_id = :repoid AND pull_request_history.action = &#39;merged&#39;[[ AND pull_request_history.actor_id = :userid]] GROUP BY DATE(created_at)) AS pulls</span>
+<span class="s2">            ON DATE(pulls.created_at) = DATE(coms.created_at)</span>
+
+<span class="s2">            LEFT JOIN (SELECT issues.created_at AS created_at, COUNT(*) AS count FROM issues WHERE issues.repo_id = :repoid[[ AND issues.reporter_id = :userid]] GROUP BY DATE(created_at)) AS iss</span>
+<span class="s2">            ON DATE(iss.created_at) = DATE(coms.created_at)</span>
+
+<span class="s2">            LEFT JOIN (SELECT commit_comments.created_at AS created_at, COUNT(*) AS count FROM commit_comments JOIN project_commits ON project_commits.commit_id = commit_comments.commit_id WHERE project_commits.project_id = :repoid[[ AND commit_comments.user_id = :userid]] GROUP BY DATE(commit_comments.created_at)) AS comcoms</span>
+<span class="s2">            ON DATE(comcoms.created_at) = DATE(coms.created_at)</span>
+
+<span class="s2">            LEFT JOIN (SELECT pull_request_comments.created_at AS created_at, COUNT(*) AS count FROM pull_request_comments JOIN pull_requests ON pull_request_comments.pull_request_id = pull_requests.id WHERE pull_requests.base_repo_id = :repoid[[ AND pull_request_comments.user_id = :userid]] GROUP BY DATE(pull_request_comments.created_at)) AS pullscoms</span>
+<span class="s2">            ON DATE(pullscoms.created_at) = DATE(coms.created_at)</span>
+
+<span class="s2">            LEFT JOIN (SELECT issue_comments.created_at AS created_at, COUNT(*) AS count FROM issue_comments JOIN issues ON issue_comments.issue_id = issues.id WHERE issues.repo_id = :repoid[[ AND issue_comments.user_id = :userid]] GROUP BY DATE(issue_comments.created_at)) AS isscoms</span>
+<span class="s2">            ON DATE(isscoms.created_at) = DATE(coms.created_at)</span>
+
+<span class="s2">            ORDER BY DATE(coms.created_at)</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">userid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">userid</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="n">rawContributionsSQL</span> <span class="o">=</span> <span class="n">rawContributionsSQL</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;[[&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">rawContributionsSQL</span> <span class="o">=</span> <span class="n">rawContributionsSQL</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;]]&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">parameterized</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">rawContributionsSQL</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">parameterized</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">),</span> <span class="s2">&quot;userid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">userid</span><span class="p">)})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rawContributionsSQL</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\[\[.+?\]\]&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">rawContributionsSQL</span><span class="p">)</span>
+            <span class="n">parameterized</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">rawContributionsSQL</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">parameterized</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.committer_locations"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.committer_locations">[docs]</a>    <span class="k">def</span> <span class="nf">committer_locations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return committers and their locations</span>
+
+<span class="sd">        @todo: Group by country code instead of users, needs the new schema</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table.</span>
+<span class="sd">        :return: DataFrame with users and locations sorted by commtis</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rawContributionsSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT users.login, users.location, COUNT(*) AS &quot;commits&quot;</span>
+<span class="s2">            FROM commits</span>
+<span class="s2">            JOIN project_commits </span>
+<span class="s2">            ON commits.id = project_commits.commit_id</span>
+<span class="s2">            JOIN users</span>
+<span class="s2">            ON users.id = commits.author_id</span>
+<span class="s2">            WHERE project_commits.project_id = :repoid</span>
+<span class="s2">            AND LENGTH(users.location) &gt; 1</span>
+<span class="s2">            GROUP BY users.id</span>
+<span class="s2">            ORDER BY commits DESC</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">rawContributionsSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+
+<div class="viewcode-block" id="GHData.issue_response_time"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.issue_response_time">[docs]</a>    <span class="k">def</span> <span class="nf">issue_response_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        How long it takes for issues to be responded to by people who have commits associate with the project</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table. </span>
+<span class="sd">        :return: DataFrame with the issues&#39; id the date it was</span>
+<span class="sd">                 opened, and the date it was first responded to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">issuesSQL</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT issues.created_at               AS &quot;created_at&quot;,</span>
+<span class="s2">                   MIN(issue_comments.created_at)  AS &quot;responded_at&quot;</span>
+<span class="s2">            FROM issues</span>
+<span class="s2">            JOIN issue_comments</span>
+<span class="s2">            ON issue_comments.issue_id = issues.id</span>
+<span class="s2">            WHERE issue_comments.user_id IN </span>
+<span class="s2">                (SELECT users.id</span>
+<span class="s2">                FROM users</span>
+<span class="s2">                JOIN commits</span>
+<span class="s2">                WHERE commits.author_id = users.id</span>
+<span class="s2">                AND commits.project_id = :repoid)</span>
+<span class="s2">            AND issues.repo_id = :repoid</span>
+<span class="s2">            GROUP BY issues.id</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="n">issuesSQL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repoid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">repoid</span><span class="p">)})</span></div>
+
+<div class="viewcode-block" id="GHData.linking_websites"><a class="viewcode-back" href="../../ghdata.html#ghdata.ghdata.GHData.linking_websites">[docs]</a>    <span class="k">def</span> <span class="nf">linking_websites</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repoid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Finds the repo&#39;s popularity on the internet</span>
+
+<span class="sd">        :param repoid: The id of the project in the projects table. </span>
+<span class="sd">        :return: DataFrame with the issues&#39; id the date it was</span>
+<span class="sd">                 opened, and the date it was first responded to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Get the url of the repo</span>
+        <span class="n">repo_url_query</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">sql</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s1">&#39;SELECT projects.url FROM projects WHERE projects.id = :repoid&#39;</span><span class="p">)</span>
+        <span class="n">repo_url</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">repo_url_query</span><span class="p">,</span> <span class="n">repoid</span><span class="o">=</span><span class="n">repoid</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="n">repo_url</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Find websites that link to that repo</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="s1">&#39;&lt;a+href%3D&quot;</span><span class="si">{repourl}</span><span class="s1">&quot;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">repourl</span><span class="o">=</span><span class="n">url</span><span class="o">.</span><span class="n">quote_plus</span><span class="p">(</span><span class="n">repo_url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;api.&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;repos/&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)))</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="s1">&#39;https://publicwww.com/websites/</span><span class="si">{query}</span><span class="s1">/?export=csv&amp;apikey=</span><span class="si">{apikey}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">,</span> <span class="n">apikey</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">PUBLIC_WWW_API_KEY</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span>  <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;url&#39;</span><span class="p">,</span> <span class="s1">&#39;rank&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">result</span></div></div>
+
+
+
+
+
+
+       
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, OSSHealth Team.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

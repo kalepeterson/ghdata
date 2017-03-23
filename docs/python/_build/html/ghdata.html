@@ -1,0 +1,390 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ghdata package &#8212; GHData  documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="ghdata" href="modules.html" />
+    <link rel="prev" title="GHData" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ghdata-package">
+<h1>ghdata package<a class="headerlink" href="#ghdata-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ghdata.ghdata">
+<span id="ghdata-ghdata-module"></span><h2>ghdata.ghdata module<a class="headerlink" href="#module-ghdata.ghdata" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="ghdata.ghdata.GHData">
+<em class="property">class </em><code class="descclassname">ghdata.ghdata.</code><code class="descname">GHData</code><span class="sig-paren">(</span><em>dbstr</em>, <em>public_www_api_key=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Uses GHTorrent and other GitHub data sources and returns dataframes with interesting GitHub indicators</p>
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.commits">
+<code class="descname">commits</code><span class="sig-paren">(</span><em>repoid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.commits"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.commits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Timeseries of all the commits on a repo</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>repoid</strong> &#8211; The id of the project in the projects table. Use repoid() to get this.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">DataFrame with commits/day</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.committer_locations">
+<code class="descname">committer_locations</code><span class="sig-paren">(</span><em>repoid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.committer_locations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.committer_locations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return committers and their locations</p>
+<p>&#64;todo: Group by country code instead of users, needs the new schema</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>repoid</strong> &#8211; The id of the project in the projects table.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">DataFrame with users and locations sorted by commtis</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.contributions">
+<code class="descname">contributions</code><span class="sig-paren">(</span><em>repoid</em>, <em>userid=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.contributions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.contributions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Timeseries of all the contributions to a project, optionally limited to a specific user</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>repoid</strong> &#8211; The id of the project in the projects table.</li>
+<li><strong>userid</strong> &#8211; The id of user if you want to limit the contributions to a specific user.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">DataFrame with all of the contributions seperated by day.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.contributors">
+<code class="descname">contributors</code><span class="sig-paren">(</span><em>repoid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.contributors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.contributors" title="Permalink to this definition">¶</a></dt>
+<dd><p>All the contributors to a project and the counts of their contributions</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>repoid</strong> &#8211; The id of the project in the projects table. Use repoid() to get this.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">DataFrame with users id, users login, and their contributions by type</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.forks">
+<code class="descname">forks</code><span class="sig-paren">(</span><em>repoid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.forks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.forks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Timeseries of when a repo&#8217;s forks were created</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>repoid</strong> &#8211; The id of the project in the projects table. Use repoid() to get this.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">DataFrame with forks/day</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.issue_response_time">
+<code class="descname">issue_response_time</code><span class="sig-paren">(</span><em>repoid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.issue_response_time"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.issue_response_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>How long it takes for issues to be responded to by people who have commits associate with the project</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>repoid</strong> &#8211; The id of the project in the projects table.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">DataFrame with the issues&#8217; id the date it was
+opened, and the date it was first responded to</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.issues">
+<code class="descname">issues</code><span class="sig-paren">(</span><em>repoid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.issues"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.issues" title="Permalink to this definition">¶</a></dt>
+<dd><p>Timeseries of when people starred a repo</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>repoid</strong> &#8211; The id of the project in the projects table. Use repoid() to get this.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">DataFrame with issues/day</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.issues_with_close">
+<code class="descname">issues_with_close</code><span class="sig-paren">(</span><em>repoid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.issues_with_close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.issues_with_close" title="Permalink to this definition">¶</a></dt>
+<dd><p>How long on average each week it takes to close an issue</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>repoid</strong> &#8211; The id of the project in the projects table. Use repoid() to get this.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">DataFrame with issues/day</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.linking_websites">
+<code class="descname">linking_websites</code><span class="sig-paren">(</span><em>repoid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.linking_websites"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.linking_websites" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds the repo&#8217;s popularity on the internet</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>repoid</strong> &#8211; The id of the project in the projects table.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">DataFrame with the issues&#8217; id the date it was
+opened, and the date it was first responded to</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.pulls">
+<code class="descname">pulls</code><span class="sig-paren">(</span><em>repoid</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.pulls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.pulls" title="Permalink to this definition">¶</a></dt>
+<dd><p>Timeseries of pull requests creation, also gives their associated activity</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>repoid</strong> &#8211; The id of the project in the projects table. Use repoid() to get this.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">DataFrame with pull requests by day</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.repoid">
+<code class="descname">repoid</code><span class="sig-paren">(</span><em>owner</em>, <em>repo</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.repoid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.repoid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a repository&#8217;s ID as it appears in the GHTorrent projects table
+github.com/[owner]/[project]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>owner</strong> &#8211; The username of a project&#8217;s owner</li>
+<li><strong>repo</strong> &#8211; The name of the repository</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The repository&#8217;s ID as it appears in the GHTorrent projects table</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.stargazers">
+<code class="descname">stargazers</code><span class="sig-paren">(</span><em>repoid</em>, <em>start=None</em>, <em>end=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.stargazers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.stargazers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Timeseries of when people starred a repo</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>repoid</strong> &#8211; The id of the project in the projects table. Use repoid() to get this.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">DataFrame with stargazers/day</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ghdata.ghdata.GHData.userid">
+<code class="descname">userid</code><span class="sig-paren">(</span><em>username</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/ghdata.html#GHData.userid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.ghdata.GHData.userid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the userid given a username</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>username</strong> &#8211; GitHub username to be matched against the login table in GHTorrent</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The id from the users table in GHTorrent</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-ghdata.server">
+<span id="ghdata-server-module"></span><h2>ghdata.server module<a class="headerlink" href="#module-ghdata.server" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="ghdata.server.GHDataClient">
+<em class="property">class </em><code class="descclassname">ghdata.server.</code><code class="descname">GHDataClient</code><span class="sig-paren">(</span><em>db_host='127.0.0.1'</em>, <em>db_port=3306</em>, <em>db_user='root'</em>, <em>db_pass=''</em>, <em>db_name='ghtorrent'</em>, <em>public_www_api_key=None</em>, <em>file=None</em>, <em>connect=False</em>, <em>debug=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/server.html#GHDataClient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.server.GHDataClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads the configuration file, creates an instance of GHData, serializes dataframes into JSON</p>
+<dl class="method">
+<dt id="ghdata.server.GHDataClient.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>key</em>, <em>**args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/server.html#GHDataClient.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.server.GHDataClient.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="ghdata.server.api_root">
+<code class="descclassname">ghdata.server.</code><code class="descname">api_root</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/server.html#api_root"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.server.api_root" title="Permalink to this definition">¶</a></dt>
+<dd><p>API status</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ghdata.server.basic_endpoint">
+<code class="descclassname">ghdata.server.</code><code class="descname">basic_endpoint</code><span class="sig-paren">(</span><em>flaskapp</em>, <em>table</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/server.html#basic_endpoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.server.basic_endpoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simplifies API endpoints that just accept owner and repo</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ghdata.server.contributions">
+<code class="descclassname">ghdata.server.</code><code class="descname">contributions</code><span class="sig-paren">(</span><em>owner</em>, <em>repo</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/server.html#contributions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.server.contributions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="ghdata.server.init">
+<code class="descclassname">ghdata.server.</code><code class="descname">init</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/ghdata/server.html#init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ghdata.server.init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads the config file</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ghdata">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-ghdata" title="Permalink to this headline">¶</a></h2>
+<p>GHData is a library for researchers who wants to work with metrics related to
+the health and sustainability of GitHub repositories.</p>
+<p>Most functions in the library return Pandas DataFrames.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">ghdata package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-ghdata.ghdata">ghdata.ghdata module</a></li>
+<li><a class="reference internal" href="#module-ghdata.server">ghdata.server module</a></li>
+<li><a class="reference internal" href="#module-ghdata">Module contents</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">GHData</a></li>
+      <li>Next: <a href="modules.html" title="next chapter">ghdata</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/ghdata.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, OSSHealth Team.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="_sources/ghdata.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
