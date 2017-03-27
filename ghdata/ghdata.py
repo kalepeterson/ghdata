@@ -10,6 +10,17 @@ else:
     import urllib as url
 import json
 import re
+from enum import Enum
+
+class GROUP_TYPES(Enum):
+    DAY = 1
+    D = 1
+    WEEK = 2
+    W = 2
+    MONTH = 3
+    M = 3
+    YEAR = 4
+    Y = 4
 
 class GHData(object):
     """Uses GHTorrent and other GitHub data sources and returns dataframes with interesting GitHub indicators"""
@@ -17,26 +28,46 @@ class GHData(object):
     def __init__(self, dbstr, public_www_api_key=None):
         """
         Connect to GHTorrent
-
+t
         :param dbstr: The [database string](http://docs.sqlalchemy.org/en/latest/core/engines.html) to connect to the GHTorrent database
         """
         self.db = s.create_engine(dbstr)
         self.PUBLIC_WWW_API_KEY = public_www_api_key
 
-    def __single_table_count_by_date(self, table, repo_col='project_id'):
+    # def __single_table_count_by_date(self, table, repo_col='project_id'):
+    #     """
+    #     Generates query string to count occurances of rows per date for a given table.
+    #     External input must never be sent to this function, it is for internal use only.
+    #
+    #     :param table: The table in GHTorrent to generate the string for
+    #     :param repo_col: The column in that table with the project ids
+    #     :return: Query string
+    #     """
+    #     return """
+    #         SELECT date(created_at) AS "date", COUNT(*) AS "{0}"
+    #         FROM {0}
+    #         WHERE {1} = :repoid
+    #         GROUP BY WEEK(created_at)""".format(table, repo_col)
+
+    def __single_table_count_by_date(self, table, repo_col='project_id', group_type='DAY'):
         """
         Generates query string to count occurances of rows per date for a given table.
         External input must never be sent to this function, it is for internal use only.
 
         :param table: The table in GHTorrent to generate the string for
         :param repo_col: The column in that table with the project ids
+        :param group_type: Member of GROUP_TYPES, determines grouping granularity
         :return: Query string
         """
+        try:
+            gt = GROUP_TYPES[group_type.upper()]
+        except:
+            gt = GROUP_TYPES.WEEK
         return """
             SELECT date(created_at) AS "date", COUNT(*) AS "{0}"
             FROM {0}
             WHERE {1} = :repoid
-            GROUP BY WEEK(created_at)""".format(table, repo_col)
+            GROUP BY {2}(created_at)""".format(table, repo_col, gt.name)
 
     def repoid(self, owner, repo):
         """
@@ -79,6 +110,19 @@ class GHData(object):
         """
         stargazersSQL = s.sql.text(self.__single_table_count_by_date('watchers', 'repo_id'))
         return pd.read_sql(stargazersSQL, self.db, params={"repoid": str(repoid)})
+
+    def stargazers_grouped(self, repoid, group_type='WEEK', start=None, end=None):
+        """
+        Timeseries of when people starred a repo
+
+        :param repoid: The id of the project in the projects table. Use repoid() to get this.
+        :param group_type: Key of member of GROUP_TYPES, otherwise defaults to WEEK on failed lookup
+        :return: DataFrame with stargazers per [group_type]
+        """
+        stargazersSQL = s.sql.text(self.__single_table_count_by_date(
+            'watchers', 'repo_id', group_type))
+        return pd.read_sql(stargazersSQL, self.db, params={"repoid": str(repoid)})
+
 
     def commits(self, repoid):
         """
@@ -150,6 +194,32 @@ class GHData(object):
             AND pull_request_history.action = "merged"
             GROUP BY WEEK(pull_request_history.created_at)
         """)
+        return pd.read_sql(pullsSQL, self.db, params={"repoid": str(repoid)})
+
+    def pulls_grouped(self, repoid, group_type):
+        """
+        Timeseries of pull requests creation, also gives their associated activity
+
+        :param repoid: The id of the project in the projects table. Use repoid() to get this.
+        :param group_type:
+        :return: DataFrame with pull requests by day
+        """
+        try:
+            gt = GROUP_TYPES[group_type.upper()]
+        except:
+            gt = GROUP_TYPES.WEEK
+        pullsSQL = s.sql.text("""
+                    SELECT date(pull_request_history.created_at) AS "date",
+                    (COUNT(pull_requests.id)) AS "pull_requests",
+                    (SELECT COUNT(*) FROM pull_request_comments
+                    WHERE pull_request_comments.pull_request_id = pull_request_history.pull_request_id) AS "comments"
+                    FROM pull_request_history
+                    INNER JOIN pull_requests
+                    ON pull_request_history.pull_request_id = pull_requests.id
+                    WHERE pull_requests.head_repo_id = :repoid
+                    AND pull_request_history.action = "merged"
+                    GROUP BY {0}(pull_request_history.created_at)
+                """.format(gt.name))
         return pd.read_sql(pullsSQL, self.db, params={"repoid": str(repoid)})
 
     def contributors(self, repoid):

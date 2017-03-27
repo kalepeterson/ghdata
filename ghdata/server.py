@@ -272,6 +272,15 @@ app.route('/{}/<owner>/<repo>/timeseries/issues/response_time'.format(GHDATA_API
 """
 app.route('/{}/<owner>/<repo>/timeseries/pulls'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'pulls'))
 
+
+@app.route('/{}/<owner>/<repo>/timeseries/pulls/<group_type>'.format(GHDATA_API_VERSION))
+def pulls_grouped(owner, repo, group_type):
+    repoid = client.get('repoid', owner=owner, repo=repo)
+    pulls = client.get('pulls_grouped', repoid=repoid, group_type=group_type)
+    return Response(response=pulls,
+                    status=200,
+                    mimetype="application/json")
+
 """
 @api {get} /:owner/:repo/stargazers Stargazers by Week
 @apiName StargazersByWeek
@@ -293,6 +302,15 @@ app.route('/{}/<owner>/<repo>/timeseries/pulls'.format(GHDATA_API_VERSION))(basi
                     ]
 """
 app.route('/{}/<owner>/<repo>/timeseries/stargazers'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'stargazers'))
+
+
+@app.route('/{}/<owner>/<repo>/timeseries/stargazers/<group_type>'.format(GHDATA_API_VERSION))
+def stargazers_grouped(owner, repo, group_type):
+    repoid = client.get('repoid', owner=owner, repo=repo)
+    watchers = client.get('stargazers_grouped', repoid=repoid, group_type=group_type)
+    return Response(response=watchers,
+                    status=200,
+                    mimetype="application/json")
 
 """
 @api {get} /:owner/:repo/pulls/acceptance_rate Pull Request Acceptance Rate by Week
