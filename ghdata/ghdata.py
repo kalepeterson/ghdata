@@ -96,19 +96,6 @@ t
         stargazersSQL = s.sql.text(self.__single_table_count_by_date('watchers', 'repo_id'))
         return pd.read_sql(stargazersSQL, self.db, params={"repoid": str(repoid)})
 
-    def stargazers_grouped(self, repoid, group_type='WEEK', start=None, end=None):
-        """
-        Timeseries of when people starred a repo
-
-        :param repoid: The id of the project in the projects table. Use repoid() to get this.
-        :param group_type: Key of member of GROUP_TYPES, otherwise defaults to WEEK on failed lookup
-        :return: DataFrame with stargazers per [group_type]
-        """
-        stargazersSQL = s.sql.text(self.__single_table_count_by_date(
-            'watchers', 'repo_id', group_type))
-        return pd.read_sql(stargazersSQL, self.db, params={"repoid": str(repoid)})
-
-
     def commits(self, repoid):
         """
         Timeseries of all the commits on a repo
@@ -119,35 +106,16 @@ t
         commitsSQL = s.sql.text(self.__single_table_count_by_date('commits'))
         return pd.read_sql(commitsSQL, self.db, params={"repoid": str(repoid)})
 
-    def forks(self, repoid):
-        forksSQL = s.sql.text("""
-        SELECT
-            p.id
-            , p.name
-            , u.login AS fork_owner_name
-            , p.forked_from
-            , p.created_at
-        FROM
-            projects AS p
-            , users AS u
-        WHERE
-            p.owner_id = u.id
-            AND p.forked_from = :repoid;
-        """)
-        return pd.read_sql(forksSQL, self.db, params={"repoid": str(repoid)})
-
     def forks_grouped(self, repoid, group_type):
         """
         Timeseries of when a repo's forks were created
 
         :param repoid: The id of the project in the projects table. Use repoid() to get this.
-        :return: DataFrame with forks/day
+        :param group_type: Key of member of GROUP_TYPES, otherwise defaults to WEEK on failed lookup
+        :return: DataFrame with count of forks created grouped by group_type, i.e. year, month, week, or day.
         """
         forksSQL = s.sql.text(self.__single_table_count_by_date('projects', 'forked_from', group_type))
         return pd.read_sql(forksSQL, self.db, params={"repoid": str(repoid)})
-
-    def forks_grouped_default(self, repoid):
-        return self.forks_grouped(repoid, 'WEEK')
 
     def issues(self, repoid):
         """
@@ -199,32 +167,6 @@ t
             AND pull_request_history.action = "merged"
             GROUP BY WEEK(pull_request_history.created_at)
         """)
-        return pd.read_sql(pullsSQL, self.db, params={"repoid": str(repoid)})
-
-    def pulls_grouped(self, repoid, group_type):
-        """
-        Timeseries of pull requests creation, also gives their associated activity
-
-        :param repoid: The id of the project in the projects table. Use repoid() to get this.
-        :param group_type:
-        :return: DataFrame with pull requests by day
-        """
-        try:
-            gt = GROUP_TYPES[group_type.upper()]
-        except:
-            gt = GROUP_TYPES.WEEK
-        pullsSQL = s.sql.text("""
-                    SELECT date(pull_request_history.created_at) AS "date",
-                    (COUNT(pull_requests.id)) AS "pull_requests",
-                    (SELECT COUNT(*) FROM pull_request_comments
-                    WHERE pull_request_comments.pull_request_id = pull_request_history.pull_request_id) AS "comments"
-                    FROM pull_request_history
-                    INNER JOIN pull_requests
-                    ON pull_request_history.pull_request_id = pull_requests.id
-                    WHERE pull_requests.head_repo_id = :repoid
-                    AND pull_request_history.action = "merged"
-                    GROUP BY {0}(pull_request_history.created_at)
-                """.format(gt.name))
         return pd.read_sql(pullsSQL, self.db, params={"repoid": str(repoid)})
 
     def contributors(self, repoid):
@@ -431,8 +373,85 @@ t
 
         return pd.read_sql(pullAcceptanceSQL, self.db, params={"repoid": str(repoid)})
 
-    def issue_actions(self, repoid):
+    # ----- Added endpoints -----
 
+    def stargazers_grouped(self, repoid, group_type='WEEK', start=None, end=None):
+        """
+        Timeseries of when people starred a repo
+
+        :param repoid: The id of the project in the projects table. Use repoid() to get this.
+        :param group_type: Key of member of GROUP_TYPES, otherwise defaults to WEEK on failed lookup
+        :return: DataFrame with stargazers per [group_type]
+        """
+        stargazersSQL = s.sql.text(self.__single_table_count_by_date(
+            'watchers', 'repo_id', group_type))
+        return pd.read_sql(stargazersSQL, self.db, params={"repoid": str(repoid)})
+
+    def pulls_grouped(self, repoid, group_type):
+        """
+        Timeseries of pull requests creation, also gives their associated activity
+
+        :param repoid: The id of the project in the projects table. Use repoid() to get this.
+        :param group_type: Member of GROUP_TYPES; specifies how granular the returned data is.
+        :return: DataFrame with pull requests grouped by group_type, i.e. year, month, week, or day.
+        """
+        try:
+            gt = GROUP_TYPES[group_type.upper()]
+        except:
+            gt = GROUP_TYPES.WEEK
+        pullsSQL = s.sql.text("""
+                     SELECT date(pull_request_history.created_at) AS "date",
+                     (COUNT(pull_requests.id)) AS "pull_requests",
+                     (SELECT COUNT(*) FROM pull_request_comments
+                     WHERE pull_request_comments.pull_request_id = pull_request_history.pull_request_id) AS "comments"
+                     FROM pull_request_history
+                     INNER JOIN pull_requests
+                     ON pull_request_history.pull_request_id = pull_requests.id
+                     WHERE pull_requests.head_repo_id = :repoid
+                     AND pull_request_history.action = "merged"
+                     GROUP BY {0}(pull_request_history.created_at)
+                 """.format(gt.name))
+        return pd.read_sql(pullsSQL, self.db, params={"repoid": str(repoid)})
+
+    def forks(self, repoid):
+        """
+        Gets all forks for a repo.  Meant for future UI functionality and reuse within other metrics.
+
+        :param repoid: The id of the project in the projects table. Use repoid() to get this.
+        :return: DataFrame with forks of the repo.
+        """
+        forksSQL = s.sql.text("""
+        SELECT
+            p.id
+            , p.name
+            , u.login AS fork_owner_name
+            , p.forked_from
+            , p.created_at
+        FROM
+            projects AS p
+            , users AS u
+        WHERE
+            p.owner_id = u.id
+            AND p.forked_from = :repoid;
+        """)
+        return pd.read_sql(forksSQL, self.db, params={"repoid": str(repoid)})
+
+    def forks_grouped_default(self, repoid):
+        """
+        Alias for forks_grouped(repoid, 'WEEK').
+
+        :param repoid: The id of the project in the projects table. Use repoid() to get this.
+        :return: DataFrame with count of forks created by week.
+        """
+        return self.forks_grouped(repoid, 'WEEK')
+
+    def issue_actions(self, repoid):
+        """
+        Gets how many times an action of each type was performed on an issue in the repo.
+
+        :param repoid: The id of the project in the projects table. Use repoid() to get this.
+        :return: DataFrame with action name and count of occurrences of that action.
+        """
         issueActionsSQL = s.sql.text("""
         SELECT
             DISTINCT action

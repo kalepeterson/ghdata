@@ -23,9 +23,6 @@ The tests check if a value is anywhere in the dataframe
 def test_stargazers(gh):
     assert gh.stargazers(gh.repoid('akka', 'akka')).isin(["2011-09-14"]).any
 
-def test_stargazers_grouped_year(gh):
-    assert gh.stargazers_grouped(gh.repoid('rstudio', 'shiny'), 'year').isin(["331"]).any
-
 def test_commits(gh):
     assert gh.commits(gh.repoid('facebook', 'folly')).isin(["2013-01-07"]).any
 
@@ -55,3 +52,33 @@ def test_linking_websites(gh):
 
 def test_pull_acceptance_rate(gh):
     assert gh.pull_acceptance_rate(gh.repoid('akka', 'akka')).isin([0.5]).any
+
+# ----- Added tests -----
+
+def test_stargazers_grouped_year(gh):
+    assert gh.stargazers_grouped(gh.repoid('rstudio', 'shiny'), 'year').isin(["331"]).any
+    assert gh.stargazers_grouped(gh.repoid('rstudio', 'shiny'), 'y').isin(["331"]).any
+
+def test_stargazers_grouped_month(gh):
+    assert gh.stargazers_grouped(gh.repoid('rstudio', 'shiny'), 'month').isin(["331"]).any
+    assert gh.stargazers_grouped(gh.repoid('rstudio', 'shiny'), 'm').isin(["331"]).any
+
+def test_stargazers_grouped_week(gh):
+    assert gh.stargazers_grouped(gh.repoid('rstudio', 'shiny'), 'week').isin(["331"]).any
+    assert gh.stargazers_grouped(gh.repoid('rstudio', 'shiny'), 'w').isin(["331"]).any
+
+def test_stargazers_grouped_day(gh):
+    assert gh.stargazers_grouped(gh.repoid('rstudio', 'shiny'), 'day').isin(["331"]).any
+    assert gh.stargazers_grouped(gh.repoid('rstudio', 'shiny'), 'd').isin(["331"]).any
+
+def test_forks_grouped(gh):
+    assert gh.forks_grouped(gh.repoid('rstudio', 'shiny'), 'year').isin(["331"]).any
+
+def test_forks_grouped_default(gh):
+    assert gh.forks_grouped_default(gh.repoid('rstudio', 'shiny')).isin(["331"]).any
+
+def test_pulls_grouped(gh):
+    assert gh.pulls_grouped(gh.repoid('rstudio', 'shiny'), 'year').isin(["331"]).any
+
+def test_issue_actions(gh):
+    assert gh.issue_actions(gh.repoid('rstudio', 'shiny')).isin(["331"]).any

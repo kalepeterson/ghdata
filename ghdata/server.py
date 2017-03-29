@@ -204,14 +204,6 @@ app.route('/{}/<owner>/<repo>/timeseries/commits'.format(GHDATA_API_VERSION))(ba
 """
 app.route('/{}/<owner>/<repo>/timeseries/forks'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'forks_grouped_default'))
 
-@app.route('/{}/<owner>/<repo>/timeseries/forks/<group_type>'.format(GHDATA_API_VERSION))
-def forks_grouped(owner, repo, group_type):
-    repoid = client.get('repoid', owner=owner, repo=repo)
-    forks_grouped = client.get('forks_grouped', repoid=repoid, group_type=group_type)
-    return Response(response=forks_grouped,
-                    status=200,
-                    mimetype="application/json")
-
 """
 @api {get} /:owner/:repo/issues Issues by Week
 @apiName IssuesByWeek
@@ -280,18 +272,6 @@ app.route('/{}/<owner>/<repo>/timeseries/issues/response_time'.format(GHDATA_API
 """
 app.route('/{}/<owner>/<repo>/timeseries/pulls'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'pulls'))
 
-
-@app.route('/{}/<owner>/<repo>/timeseries/pulls/<group_type>'.format(GHDATA_API_VERSION))
-def pulls_grouped(owner, repo, group_type):
-    repoid = client.get('repoid', owner=owner, repo=repo)
-    pulls = client.get('pulls_grouped', repoid=repoid, group_type=group_type)
-    return Response(response=pulls,
-                    status=200,
-                    mimetype="application/json")
-
-
-app.route('/{}/<owner>/<repo>/issue_actions'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'issue_actions'))
-
 """
 @api {get} /:owner/:repo/stargazers Stargazers by Week
 @apiName StargazersByWeek
@@ -313,15 +293,6 @@ app.route('/{}/<owner>/<repo>/issue_actions'.format(GHDATA_API_VERSION))(basic_e
                     ]
 """
 app.route('/{}/<owner>/<repo>/timeseries/stargazers'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'stargazers'))
-
-
-@app.route('/{}/<owner>/<repo>/timeseries/stargazers/<group_type>'.format(GHDATA_API_VERSION))
-def stargazers_grouped(owner, repo, group_type):
-    repoid = client.get('repoid', owner=owner, repo=repo)
-    watchers = client.get('stargazers_grouped', repoid=repoid, group_type=group_type)
-    return Response(response=watchers,
-                    status=200,
-                    mimetype="application/json")
 
 """
 @api {get} /:owner/:repo/pulls/acceptance_rate Pull Request Acceptance Rate by Week
@@ -479,7 +450,36 @@ app.route('/{}/<owner>/<repo>/commits/locations'.format(GHDATA_API_VERSION))(bas
 """
 app.route('/{}/<owner>/<repo>/linking_websites'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'linking_websites'))
 
+# ----- Added routes -----
+
 app.route('/{}/<owner>/<repo>/forks'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'forks'))
+
+app.route('/{}/<owner>/<repo>/issue_actions'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'issue_actions'))
+
+
+@app.route('/{}/<owner>/<repo>/timeseries/stargazers/<group_type>'.format(GHDATA_API_VERSION))
+def stargazers_grouped(owner, repo, group_type):
+    repoid = client.get('repoid', owner=owner, repo=repo)
+    watchers = client.get('stargazers_grouped', repoid=repoid, group_type=group_type)
+    return Response(response=watchers,
+                    status=200,
+                    mimetype="application/json")
+
+@app.route('/{}/<owner>/<repo>/timeseries/pulls/<group_type>'.format(GHDATA_API_VERSION))
+def pulls_grouped(owner, repo, group_type):
+    repoid = client.get('repoid', owner=owner, repo=repo)
+    pulls = client.get('pulls_grouped', repoid=repoid, group_type=group_type)
+    return Response(response=pulls,
+                    status=200,
+                    mimetype="application/json")
+
+@app.route('/{}/<owner>/<repo>/timeseries/forks/<group_type>'.format(GHDATA_API_VERSION))
+def forks_grouped(owner, repo, group_type):
+    repoid = client.get('repoid', owner=owner, repo=repo)
+    forks_grouped = client.get('forks_grouped', repoid=repoid, group_type=group_type)
+    return Response(response=forks_grouped,
+                    status=200,
+                    mimetype="application/json")
 
 if __name__ == '__main__':
     init()
