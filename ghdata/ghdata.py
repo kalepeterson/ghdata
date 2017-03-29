@@ -34,22 +34,7 @@ t
         self.db = s.create_engine(dbstr)
         self.PUBLIC_WWW_API_KEY = public_www_api_key
 
-    # def __single_table_count_by_date(self, table, repo_col='project_id'):
-    #     """
-    #     Generates query string to count occurances of rows per date for a given table.
-    #     External input must never be sent to this function, it is for internal use only.
-    #
-    #     :param table: The table in GHTorrent to generate the string for
-    #     :param repo_col: The column in that table with the project ids
-    #     :return: Query string
-    #     """
-    #     return """
-    #         SELECT date(created_at) AS "date", COUNT(*) AS "{0}"
-    #         FROM {0}
-    #         WHERE {1} = :repoid
-    #         GROUP BY WEEK(created_at)""".format(table, repo_col)
-
-    def __single_table_count_by_date(self, table, repo_col='project_id', group_type='DAY'):
+    def __single_table_count_by_date(self, table, repo_col='project_id', group_type='WEEK'):
         """
         Generates query string to count occurances of rows per date for a given table.
         External input must never be sent to this function, it is for internal use only.
