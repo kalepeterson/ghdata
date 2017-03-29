@@ -425,3 +425,19 @@ t
         """)
 
         return pd.read_sql(pullAcceptanceSQL, self.db, params={"repoid": str(repoid)})
+
+    def issue_actions(self, repoid):
+
+        issueActionsSQL = s.sql.text("""
+        SELECT
+            DISTINCT action
+          , COUNT(action) AS amount
+        FROM issue_events
+        WHERE issue_id IN (
+	      SELECT id
+          FROM issues
+          WHERE repo_id = :repoid
+        )
+GROUP BY action;
+        """)
+        return pd.read_sql(issueActionsSQL, self.db, params={"repoid": str(repoid)})

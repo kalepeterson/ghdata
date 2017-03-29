@@ -281,6 +281,9 @@ def pulls_grouped(owner, repo, group_type):
                     status=200,
                     mimetype="application/json")
 
+
+app.route('/{}/<owner>/<repo>/issue_actions'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'issue_actions'))
+
 """
 @api {get} /:owner/:repo/stargazers Stargazers by Week
 @apiName StargazersByWeek
