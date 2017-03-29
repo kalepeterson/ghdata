@@ -23,6 +23,9 @@ The tests check if a value is anywhere in the dataframe
 def test_stargazers(gh):
     assert gh.stargazers(gh.repoid('akka', 'akka')).isin(["2011-09-14"]).any
 
+def test_stargazers_grouped_year(gh):
+    assert gh.stargazers_grouped(gh.repoid('rstudio', 'shiny'), 'year').isin(["331"]).any
+
 def test_commits(gh):
     assert gh.commits(gh.repoid('facebook', 'folly')).isin(["2013-01-07"]).any
 
