@@ -120,14 +120,34 @@ t
         return pd.read_sql(commitsSQL, self.db, params={"repoid": str(repoid)})
 
     def forks(self, repoid):
+        forksSQL = s.sql.text("""
+        SELECT
+            p.id
+            , p.name
+            , u.login AS fork_owner_name
+            , p.forked_from
+            , p.created_at
+        FROM
+            projects AS p
+            , users AS u
+        WHERE
+            p.owner_id = u.id
+            AND p.forked_from = :repoid;
+        """)
+        return pd.read_sql(forksSQL, self.db, params={"repoid": str(repoid)})
+
+    def forks_grouped(self, repoid, group_type):
         """
         Timeseries of when a repo's forks were created
 
         :param repoid: The id of the project in the projects table. Use repoid() to get this.
         :return: DataFrame with forks/day
         """
-        forksSQL = s.sql.text(self.__single_table_count_by_date('projects', 'forked_from'))
-        return pd.read_sql(forksSQL, self.db, params={"repoid": str(repoid)}).drop(0)
+        forksSQL = s.sql.text(self.__single_table_count_by_date('projects', 'forked_from', group_type))
+        return pd.read_sql(forksSQL, self.db, params={"repoid": str(repoid)})
+
+    def forks_grouped_default(self, repoid):
+        return self.forks_grouped(repoid, 'WEEK')
 
     def issues(self, repoid):
         """
@@ -423,6 +443,6 @@ t
           FROM issues
           WHERE repo_id = :repoid
         )
-GROUP BY action;
+        GROUP BY action;
         """)
         return pd.read_sql(issueActionsSQL, self.db, params={"repoid": str(repoid)})

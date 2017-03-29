@@ -202,7 +202,15 @@ app.route('/{}/<owner>/<repo>/timeseries/commits'.format(GHDATA_API_VERSION))(ba
                         }
                     ]
 """
-app.route('/{}/<owner>/<repo>/timeseries/forks'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'forks'))
+app.route('/{}/<owner>/<repo>/timeseries/forks'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'forks_grouped_default'))
+
+@app.route('/{}/<owner>/<repo>/timeseries/forks/<group_type>'.format(GHDATA_API_VERSION))
+def forks_grouped(owner, repo, group_type):
+    repoid = client.get('repoid', owner=owner, repo=repo)
+    forks_grouped = client.get('forks_grouped', repoid=repoid, group_type=group_type)
+    return Response(response=forks_grouped,
+                    status=200,
+                    mimetype="application/json")
 
 """
 @api {get} /:owner/:repo/issues Issues by Week
@@ -470,6 +478,8 @@ app.route('/{}/<owner>/<repo>/commits/locations'.format(GHDATA_API_VERSION))(bas
                     ]
 """
 app.route('/{}/<owner>/<repo>/linking_websites'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'linking_websites'))
+
+app.route('/{}/<owner>/<repo>/forks'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'forks'))
 
 if __name__ == '__main__':
     init()
