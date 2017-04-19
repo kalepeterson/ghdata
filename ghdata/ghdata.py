@@ -10,19 +10,9 @@ else:
     import urllib as url
 import json
 import re
-from enum import Enum
-
-class GROUP_TYPES(Enum):
-    DAY = 1
-    D = 1
-    WEEK = 2
-    W = 2
-    MONTH = 3
-    M = 3
-    YEAR = 4
-    Y = 4
 
 class GHData(object):
+
     """Uses GHTorrent and other GitHub data sources and returns dataframes with interesting GitHub indicators"""
 
     def __init__(self, dbstr, public_www_api_key=None):
@@ -34,6 +24,16 @@ t
         self.db = s.create_engine(dbstr)
         self.PUBLIC_WWW_API_KEY = public_www_api_key
 
+    def convert_group_type(self, group_type):
+        group_types = {'DAY', 'WEEK', 'MONTH', 'YEAR'}
+        gt_shortcut = {'D': 'DAY', 'W': 'WEEK', 'M': 'MONTH', 'Y': 'YEAR'}
+        if not group_type in group_types:
+            if group_type in gt_shortcut.keys():
+                group_type = gt_shortcut[group_type]
+            else:
+                group_type = 'WEEK'
+        return group_type
+
     def __single_table_count_by_date(self, table, repo_col='project_id', group_type='WEEK'):
         """
         Generates query string to count occurances of rows per date for a given table.
@@ -44,15 +44,12 @@ t
         :param group_type: Member of GROUP_TYPES, determines grouping granularity
         :return: Query string
         """
-        try:
-            gt = GROUP_TYPES[group_type.upper()]
-        except:
-            gt = GROUP_TYPES.WEEK
+        gt = group_type.upper()
         return """
             SELECT date(created_at) AS "date", COUNT(*) AS "{0}"
             FROM {0}
             WHERE {1} = :repoid
-            GROUP BY {2}(created_at)""".format(table, repo_col, gt.name)
+            GROUP BY {2}(created_at)""".format(table, repo_col, self.convert_group_type(gt))
 
     def repoid(self, owner, repo):
         """
@@ -395,10 +392,7 @@ t
         :param group_type: Member of GROUP_TYPES; specifies how granular the returned data is.
         :return: DataFrame with pull requests grouped by group_type, i.e. year, month, week, or day.
         """
-        try:
-            gt = GROUP_TYPES[group_type.upper()]
-        except:
-            gt = GROUP_TYPES.WEEK
+        gt = group_type.upper()
         pullsSQL = s.sql.text("""
                      SELECT date(pull_request_history.created_at) AS "date",
                      (COUNT(pull_requests.id)) AS "pull_requests",
@@ -410,7 +404,7 @@ t
                      WHERE pull_requests.head_repo_id = :repoid
                      AND pull_request_history.action = "merged"
                      GROUP BY {0}(pull_request_history.created_at)
-                 """.format(gt.name))
+                 """.format(self.convert_group_type(gt)))
         return pd.read_sql(pullsSQL, self.db, params={"repoid": str(repoid)})
 
     def forks(self, repoid):
