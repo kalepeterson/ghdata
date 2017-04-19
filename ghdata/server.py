@@ -456,6 +456,7 @@ app.route('/{}/<owner>/<repo>/forks'.format(GHDATA_API_VERSION))(basic_endpoint(
 
 app.route('/{}/<owner>/<repo>/issue_actions'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'issue_actions'))
 
+app.route('/{}/<owner>/<repo>/issues/average_response'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'average_issue_response_time'))
 
 @app.route('/{}/<owner>/<repo>/timeseries/stargazers/<group_type>'.format(GHDATA_API_VERSION))
 def stargazers_grouped(owner, repo, group_type):
@@ -480,6 +481,8 @@ def forks_grouped(owner, repo, group_type):
     return Response(response=forks_grouped,
                     status=200,
                     mimetype="application/json")
+
+
 
 if __name__ == '__main__':
     init()

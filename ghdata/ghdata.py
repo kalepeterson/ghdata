@@ -319,6 +319,35 @@ t
         """)
         return pd.read_sql(issuesSQL, self.db, params={"repoid": str(repoid)})
 
+    def average_issue_response_time(self, repoid):
+        """
+        The average time it takes for issues to be responded to by people who have commits associate with the project
+
+        :param repoid: The id of the project in the projects table.
+        :return: DataFrame with the issues' id the date it was
+                 opened, and the date it was first responded to
+        """
+        avgissuesSQL = s.sql.text("""
+            SELECT avg(time_to_member_comment_in_days) as avg_days_to_member_comment, MAX(time_to_member_comment_in_days) as max_days_to_member_comment, MIN(time_to_member_comment_in_days) as min_days_to_member_comment, project_name, url
+            FROM
+            (
+	        SELECT DATEDIFF(earliest_member_comment, issue_created) time_to_member_comment_in_days, project_id, issue_id, project_name, url
+	        FROM
+	        (SELECT projects.id as project_id, 
+	        		MIN(issue_comments.created_at) as earliest_member_comment, 
+	        		issues.created_at as issue_created, 
+	        		issues.id as issue_id, projects.name as project_name, url
+	        FROM projects
+	        	join project_members on projects.id = project_members.repo_id
+	        	join issues on issues.repo_id = projects.id
+	        	join issue_comments on issue_comments.issue_id = issues.id
+	        where issue_comments.user_id = project_members.user_id
+            and projects.id = :repoid
+	        group by issues.id) as earliest_member_comments) as time_to_member_comment
+            group by project_id
+        """)
+        return pd.read_sql(avgissuesSQL, self.db, params={"repoid": str(repoid)})
+
     def linking_websites(self, repoid):
         """
         Finds the repo's popularity on the internet
