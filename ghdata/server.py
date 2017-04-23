@@ -456,7 +456,15 @@ app.route('/{}/<owner>/<repo>/forks'.format(GHDATA_API_VERSION))(basic_endpoint(
 
 app.route('/{}/<owner>/<repo>/issue_actions'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'issue_actions'))
 
+# -- Milestone 3 routes start --
 app.route('/{}/<owner>/<repo>/issues/average_response'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'average_issue_response_time'))
+
+app.route('/{}/<owner>/<repo>/relative_activity'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'relative_activity'))
+
+app.route('/{}/<owner>/<repo>/relative_activity_pm'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'relative_activity_pm'))
+
+app.route('/{}/<owner>/<repo>/relative_activity_nonpm'.format(GHDATA_API_VERSION))(basic_endpoint(app, 'relative_activity_nonpm'))
+# -- end M3 routes --
 
 @app.route('/{}/<owner>/<repo>/timeseries/stargazers/<group_type>'.format(GHDATA_API_VERSION))
 def stargazers_grouped(owner, repo, group_type):

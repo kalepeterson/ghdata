@@ -319,35 +319,6 @@ t
         """)
         return pd.read_sql(issuesSQL, self.db, params={"repoid": str(repoid)})
 
-    def average_issue_response_time(self, repoid):
-        """
-        The average time it takes for issues to be responded to by people who have commits associate with the project
-
-        :param repoid: The id of the project in the projects table.
-        :return: DataFrame with the issues' id the date it was
-                 opened, and the date it was first responded to
-        """
-        avgissuesSQL = s.sql.text("""
-            SELECT avg(time_to_member_comment_in_days) as avg_days_to_member_comment, MAX(time_to_member_comment_in_days) as max_days_to_member_comment, MIN(time_to_member_comment_in_days) as min_days_to_member_comment, project_name, url
-            FROM
-            (
-	        SELECT DATEDIFF(earliest_member_comment, issue_created) time_to_member_comment_in_days, project_id, issue_id, project_name, url
-	        FROM
-	        (SELECT projects.id as project_id, 
-	        		MIN(issue_comments.created_at) as earliest_member_comment, 
-	        		issues.created_at as issue_created, 
-	        		issues.id as issue_id, projects.name as project_name, url
-	        FROM projects
-	        	join project_members on projects.id = project_members.repo_id
-	        	join issues on issues.repo_id = projects.id
-	        	join issue_comments on issue_comments.issue_id = issues.id
-	        where issue_comments.user_id = project_members.user_id
-            and projects.id = :repoid
-	        group by issues.id) as earliest_member_comments) as time_to_member_comment
-            group by project_id
-        """)
-        return pd.read_sql(avgissuesSQL, self.db, params={"repoid": str(repoid)})
-
     def linking_websites(self, repoid):
         """
         Finds the repo's popularity on the internet
@@ -400,6 +371,155 @@ t
         return pd.read_sql(pullAcceptanceSQL, self.db, params={"repoid": str(repoid)})
 
     # ----- Added endpoints -----
+
+        # -- Milestone 3 endpoints --
+
+        def average_issue_response_time(self, repoid):
+            """
+            The average time it takes for issues to be responded to by people who have commits associate with the project
+
+            :param repoid: The id of the project in the projects table.
+            :return: DataFrame with the issues' id the date it was
+                     opened, and the date it was first responded to
+            """
+            avgissuesSQL = s.sql.text("""
+                SELECT avg(time_to_member_comment_in_days) as avg_days_to_member_comment, MAX(time_to_member_comment_in_days) as max_days_to_member_comment, MIN(time_to_member_comment_in_days) as min_days_to_member_comment, project_name, url
+                FROM
+                (
+    	        SELECT DATEDIFF(earliest_member_comment, issue_created) time_to_member_comment_in_days, project_id, issue_id, project_name, url
+    	        FROM
+    	        (SELECT projects.id as project_id,
+    	        		MIN(issue_comments.created_at) as earliest_member_comment,
+    	        		issues.created_at as issue_created,
+    	        		issues.id as issue_id, projects.name as project_name, url
+    	        FROM projects
+    	        	join project_members on projects.id = project_members.repo_id
+    	        	join issues on issues.repo_id = projects.id
+    	        	join issue_comments on issue_comments.issue_id = issues.id
+    	        where issue_comments.user_id = project_members.user_id
+                and projects.id = :repoid
+    	        group by issues.id) as earliest_member_comments) as time_to_member_comment
+                group by project_id
+            """)
+            return pd.read_sql(avgissuesSQL, self.db, params={"repoid": str(repoid)})
+
+    def relative_activity(self, repoid):
+        """
+        The number of contributions from project members vs the number of contributions from other users.
+        See "Relative Activity" in OSS Health Metrics wiki:
+        https://wiki.linuxfoundation.org/oss-health-metrics/metrics
+
+        :param repoid: The id of the project in the projects table. Use repoid() to get this.
+        :return: DataFrame with number of project members, total contributions of all project members,
+        total contributions of non-project members, and the ratio of pm_contributions / non-pm_contributions.
+        """
+        relactSQL = s.sql.text("""
+        select
+	(select count(user_id) from project_members where repo_id = :repoid) as total_contributors
+    , ((select count(id) from commits where project_id = :repoid and author_id in (select user_id from project_members where repo_id = :repoid)) +
+	(select count(id) from issues where repo_id = :repoid and reporter_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(ic.comment_id) from issue_comments as ic, issues as i
+		where ic.issue_id = i.id and i.repo_id = :repoid and ic.user_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(id) from pull_requests where (base_repo_id = :repoid or head_repo_id = :repoid)
+		and user_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(pc.comment_id) from pull_request_comments as pc, pull_requests as pr
+		where pc.pull_request_id = pr.id and (pr.base_repo_id = :repoid or pr.head_repo_id = :repoid)
+        and pc.user_id in (select user_id from project_members where repo_id = :repoid))) as total_pm_contributions
+	, ((select count(id) from commits where project_id = :repoid and not author_id in (select user_id from project_members where repo_id = :repoid)) +
+	(select count(id) from issues where repo_id = :repoid and not reporter_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(ic.comment_id) from issue_comments as ic, issues as i
+		where ic.issue_id = i.id and i.repo_id = :repoid and not ic.user_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(id) from pull_requests where (base_repo_id = :repoid or head_repo_id = :repoid)
+		and not user_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(pc.comment_id) from pull_request_comments as pc, pull_requests as pr
+		where pc.pull_request_id = pr.id and (pr.base_repo_id = :repoid or pr.head_repo_id = :repoid)
+        and not pc.user_id in (select user_id from project_members where repo_id = :repoid))) as total_nonpm_contributions
+	, (((select count(id) from commits where project_id = :repoid and author_id in (select user_id from project_members where repo_id = :repoid)) +
+	(select count(id) from issues where repo_id = :repoid and reporter_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(ic.comment_id) from issue_comments as ic, issues as i
+		where ic.issue_id = i.id and i.repo_id = :repoid and ic.user_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(id) from pull_requests where (base_repo_id = :repoid or head_repo_id = :repoid)
+		and user_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(pc.comment_id) from pull_request_comments as pc, pull_requests as pr
+		where pc.pull_request_id = pr.id and (pr.base_repo_id = :repoid or pr.head_repo_id = :repoid)
+        and pc.user_id in (select user_id from project_members where repo_id = :repoid)))
+	/
+    ((select count(id) from commits where project_id = :repoid and not author_id in (select user_id from project_members where repo_id = :repoid)) +
+	(select count(id) from issues where repo_id = :repoid and not reporter_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(ic.comment_id) from issue_comments as ic, issues as i
+		where ic.issue_id = i.id and i.repo_id = :repoid and not ic.user_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(id) from pull_requests where (base_repo_id = :repoid or head_repo_id = :repoid)
+		and not user_id in (select user_id from project_members where repo_id = :repoid)) +
+    (select count(pc.comment_id) from pull_request_comments as pc, pull_requests as pr
+		where pc.pull_request_id = pr.id and (pr.base_repo_id = :repoid or pr.head_repo_id = :repoid)
+        and not pc.user_id in (select user_id from project_members where repo_id = :repoid)))) as pm_over_nonpm_ratio
+;""")
+        return pd.read_sql(relactSQL, self.db, params={"repoid": str(repoid)})
+
+    def relative_activity_pm(self, repoid):
+        """
+        Breakdown of contributions by project members only.
+        :param repoid: The id of the project in the projects table. Use repoid() to get this.
+        :return: DataFrame with total commits, issues, issue comments, pull requests, and pull request commments made
+        by project members.
+        """
+        relact_pmSQL = s.sql.text("""
+        select
+	(select count(user_id) from project_members where repo_id = :repoid) as total_pm_contributors
+    , ((select count(id) from commits where project_id = :repoid and author_id in (select user_id from project_members where repo_id = :repoid)) +
+		(select count(id) from issues where repo_id = :repoid and reporter_id in (select user_id from project_members where repo_id = :repoid)) +
+		(select count(ic.comment_id) from issue_comments as ic, issues as i
+			where ic.issue_id = i.id and i.repo_id = :repoid and ic.user_id in (select user_id from project_members where repo_id = :repoid)) +
+		(select count(id) from pull_requests where (base_repo_id = :repoid or head_repo_id = :repoid)
+			and user_id in (select user_id from project_members where repo_id = :repoid)) +
+		(select count(pc.comment_id) from pull_request_comments as pc, pull_requests as pr
+			where pc.pull_request_id = pr.id and (pr.base_repo_id = :repoid or pr.head_repo_id = :repoid)
+			and pc.user_id in (select user_id from project_members where repo_id = :repoid)))
+	as total_pm_contributions
+	, (select count(id) from commits where project_id = :repoid and author_id in (select user_id from project_members where repo_id = :repoid))
+    as pm_commits
+	, (select count(id) from issues where repo_id = :repoid and reporter_id in (select user_id from project_members where repo_id = :repoid))
+    as pm_issues
+    , (select count(ic.comment_id) from issue_comments as ic, issues as i
+		where ic.issue_id = i.id and i.repo_id = :repoid and ic.user_id in (select user_id from project_members where repo_id = :repoid))
+	as pm_issue_cmnts
+    , (select count(id) from pull_requests where (base_repo_id = :repoid or head_repo_id = :repoid)
+		and user_id in (select user_id from project_members where repo_id = :repoid))
+	as pm_pullreqs
+    , (select count(pc.comment_id) from pull_request_comments as pc, pull_requests as pr
+		where pc.pull_request_id = pr.id and (pr.base_repo_id = :repoid or pr.head_repo_id = :repoid)
+        and pc.user_id in (select user_id from project_members where repo_id = :repoid))
+	as pm_pullreq_cmnts
+;""")
+        return pd.read_sql(relact_pmSQL, self.db, params={"repoid": str(repoid)})
+
+    def relative_activity_nonpm(self, repoid):
+        """
+        Breakdown of contributions by non-project members only.
+        :param repoid: The id of the project in the projects table. Use repoid() to get this.
+        :return: DataFrame with total commits, issues, issue comments, pull requests, and pull request commments made
+        by non-project members.
+        """
+        relact_npmSQL = s.sql.text("""
+        select
+	(select count(id) from commits where project_id = :repoid and not author_id in (select user_id from project_members where repo_id = :repoid))
+    as nonpm_commits
+	, (select count(id) from issues where repo_id = :repoid and not reporter_id in (select user_id from project_members where repo_id = :repoid))
+    as nonpm_issues
+    , (select count(ic.comment_id) from issue_comments as ic, issues as i
+		where ic.issue_id = i.id and i.repo_id = :repoid and not ic.user_id in (select user_id from project_members where repo_id = :repoid))
+	as nonpm_issue_cmnts
+    , (select count(id) from pull_requests where (base_repo_id = :repoid or head_repo_id = :repoid)
+		and not user_id in (select user_id from project_members where repo_id = :repoid))
+	as nonpm_pullreqs
+    , (select count(pc.comment_id) from pull_request_comments as pc, pull_requests as pr
+		where pc.pull_request_id = pr.id and (pr.base_repo_id = :repoid or pr.head_repo_id = :repoid)
+        and not pc.user_id in (select user_id from project_members where repo_id = :repoid))
+	as nonpm_pullreq_cmnts
+;""")
+        return pd.read_sql(relact_npmSQL, self.db, params={"repoid": str(repoid)})
+
+        # -- Milestone 2 endpoints
 
     def stargazers_grouped(self, repoid, group_type='WEEK', start=None, end=None):
         """
