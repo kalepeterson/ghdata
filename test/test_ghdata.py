@@ -83,5 +83,15 @@ def test_pulls_grouped(gh):
 def test_issue_actions(gh):
     assert gh.issue_actions(gh.repoid('rstudio', 'shiny')).isin(["331"]).any
 
+# -- Added Milestone 3 Tests --
 def test_average_issue_response(gh):
     assert gh.average_issue_response_time(gh.repoid('rstudio', 'shiny')).isin(["331"]).any
+
+def test_relative_activity(gh):
+    assert gh.relative_activity(gh.repoid('rstudio', 'shiny')).isin(["331"]).any
+
+def test_relative_activity_pm(gh):
+    assert gh.relative_activity_pm(gh.repoid('rstudio', 'shiny')).isin(["331"]).any
+
+def test_relative_activity_nonpm(gh):
+    assert gh.relative_activity_nonpm(gh.repoid('rstudio', 'shiny')).isin(["331"]).any
